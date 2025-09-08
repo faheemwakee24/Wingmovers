@@ -68,6 +68,7 @@ const AdminLogin = () => {
       if (error) {
         setMessage({ type: 'error', text: error.message });
       } else if (data.user) {
+
         // Check if user is admin
         const { data: adminData, error: adminError } = await supabase
           .from('admin_users')
