@@ -14,6 +14,9 @@ import MyQuotes from './pages/MyQuotes';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminQuotes from './pages/admin/AdminQuotes';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminQuoteBuilder from './pages/admin/AdminQuoteBuilder';
+import AdminInvoiceBuilder from './pages/admin/AdminInvoiceBuilder';
 import PackingMoving from './pages/services/PackingMoving';
 import Shipping from './pages/services/Shipping';
 import FreightForwarding from './pages/services/FreightForwarding';
@@ -46,6 +49,9 @@ function App() {
             <Route path="/admin/login" element={<AdminLogin />} />
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/quotes" element={<AdminQuotes />} />
+            <Route path="/admin/quotes/new" element={<AdminQuoteBuilder />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/invoices/new" element={<AdminInvoiceBuilder />} />
             <Route path="/services/packing-moving" element={<PackingMoving />} />
             <Route path="/services/shipping" element={<Shipping />} />
             <Route path="/services/freight-forwarding" element={<FreightForwarding />} />

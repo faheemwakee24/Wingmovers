@@ -11,7 +11,7 @@ const stripe = new Stripe(stripeSecret, {
   },
 });
 
-const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+const supabase = createClient(Deno.env.get('https://neflmlvaeyocctlhvrhm.supabase.co')!, Deno.env.get('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lZmxtbHZhZXlvY2N0bGh2cmhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQzNzc3NzAsImV4cCI6MjA2OTk1Mzc3MH0.J2DPreP3m6pus6wqizlfpumIJUaaGVZzmED4iMnEnAQ')!);
 
 Deno.serve(async (req) => {
   try {
@@ -168,9 +168,9 @@ async function syncCustomerFromStripe(customerId: string) {
         cancel_at_period_end: subscription.cancel_at_period_end,
         ...(subscription.default_payment_method && typeof subscription.default_payment_method !== 'string'
           ? {
-              payment_method_brand: subscription.default_payment_method.card?.brand ?? null,
-              payment_method_last4: subscription.default_payment_method.card?.last4 ?? null,
-            }
+            payment_method_brand: subscription.default_payment_method.card?.brand ?? null,
+            payment_method_last4: subscription.default_payment_method.card?.last4 ?? null,
+          }
           : {}),
         status: subscription.status,
       },

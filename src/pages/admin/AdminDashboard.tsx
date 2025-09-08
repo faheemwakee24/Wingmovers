@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { 
-  BarChart3, 
-  Users, 
-  MessageSquare, 
-  Clock, 
-  CheckCircle, 
+import {
+  BarChart3,
+  Users,
+  MessageSquare,
+  Clock,
+  CheckCircle,
   ArrowRight,
   Shield,
   TrendingUp,
@@ -24,21 +24,34 @@ interface DashboardStats {
 }
 
 const AdminDashboard = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
 
   useEffect(() => {
+    console.log('AdminDashboard useEffect:', { user: user?.id, isAdmin, authLoading, statsLoading });
+
+    // Wait for auth to resolve first
+    if (authLoading) return;
+
+    // Redirect if not admin
     if (!user || !isAdmin) {
+      console.log('Redirecting to admin login - not admin or no user');
       navigate('/admin/login');
       return;
     }
-    fetchDashboardStats();
-  }, [user, isAdmin, navigate]);
+
+    // Fetch stats once when admin is confirmed
+    if (!stats && !statsLoading) {
+      console.log('Fetching dashboard stats - user is admin');
+      fetchDashboardStats();
+    }
+  }, [user, isAdmin, authLoading, statsLoading, stats, navigate]);
 
   const fetchDashboardStats = async () => {
     try {
+      setStatsLoading(true);
       const { data, error } = await supabase
         .from('admin_dashboard_stats')
         .select('*')
@@ -49,20 +62,22 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
-      setLoading(false);
+      setStatsLoading(false);
     }
   };
 
-  if (!user || !isAdmin) {
-    return null;
-  }
-
-  if (loading) {
+  // Show loading while checking admin status
+  if (authLoading || (user && isAdmin && statsLoading)) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
+  }
+
+  // Redirect if not admin
+  if (!user || !isAdmin) {
+    return null;
   }
 
   const statCards = [
@@ -109,11 +124,25 @@ const AdminDashboard = () => {
       color: 'from-blue-500 to-blue-600'
     },
     {
-      title: 'User Management',
-      description: 'View and manage user accounts',
+      title: 'Create Quote',
+      description: 'Build a new quote and export as PDF',
+      icon: CheckCircle,
+      link: '/admin/quotes/new',
+      color: 'from-indigo-500 to-indigo-600'
+    },
+    {
+      title: 'Admin Users',
+      description: 'Manage admin users and permissions',
       icon: Users,
       link: '/admin/users',
       color: 'from-green-500 to-green-600'
+    },
+    {
+      title: 'Create Invoice',
+      description: 'Generate invoice PDF with line items',
+      icon: BarChart3,
+      link: '/admin/invoices/new',
+      color: 'from-purple-500 to-purple-600'
     }
   ];
 
@@ -212,7 +241,7 @@ const AdminDashboard = () => {
             <h2 className="text-2xl font-bold text-gray-900">System Overview</h2>
             <Calendar className="h-6 w-6 text-gray-400" />
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <BarChart3 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
@@ -221,7 +250,7 @@ const AdminDashboard = () => {
                 {stats?.quoted_requests || 0} of {stats?.total_quote_requests || 0} requests quoted
               </p>
             </div>
-            
+
             <div className="text-center p-4 bg-green-50 rounded-lg">
               <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
               <h3 className="font-semibold text-gray-900">Completion Rate</h3>
@@ -229,7 +258,7 @@ const AdminDashboard = () => {
                 {stats?.completed_requests || 0} requests completed
               </p>
             </div>
-            
+
             <div className="text-center p-4 bg-yellow-50 rounded-lg">
               <Clock className="h-8 w-8 text-yellow-600 mx-auto mb-2" />
               <h3 className="font-semibold text-gray-900">Pending Action</h3>

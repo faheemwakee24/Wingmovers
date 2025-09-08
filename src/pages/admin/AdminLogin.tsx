@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { Mail, Lock, Eye, EyeOff, Shield, AlertCircle } from 'lucide-react';
 
 const AdminLogin = () => {
-  const [email, setEmail] = useState('admin@wingmovers.com');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,8 +17,9 @@ const AdminLogin = () => {
     setMessage(null);
 
     try {
-      const { error } = await supabase.auth.signUp({
-        email: 'admin@wingmovers.com',
+      // First create the user account
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: email || 'admin@wingmovers.com',
         password: 'Faheem*61',
         options: {
           data: {
@@ -27,11 +28,25 @@ const AdminLogin = () => {
         },
       });
 
-      if (error) {
-        setMessage({ type: 'error', text: error.message });
-      } else {
-        setMessage({ type: 'success', text: 'Admin account created successfully! You can now sign in.' });
-        setPassword('Faheem*61');
+      if (signUpError) {
+        setMessage({ type: 'error', text: signUpError.message });
+        return;
+      }
+
+      if (signUpData.user) {
+        // Then create the admin record
+        const { error: adminError } = await supabase
+          .rpc('create_admin_user', {
+            admin_email: email || 'admin@wingmovers.com',
+            admin_role: 'admin'
+          });
+
+        if (adminError) {
+          setMessage({ type: 'error', text: `User created but admin setup failed: ${adminError.message}` });
+        } else {
+          setMessage({ type: 'success', text: 'Admin account created successfully! You can now sign in.' });
+          setPassword('Faheem*61');
+        }
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to create admin account' });
@@ -44,31 +59,39 @@ const AdminLogin = () => {
     setLoading(true);
     setMessage(null);
 
-    // Validate admin email
-    if (email !== 'admin@wingmovers.com') {
-      setMessage({ type: 'error', text: 'Invalid admin credentials' });
-      setLoading(false);
-      return;
-    }
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
-          setMessage({ 
-            type: 'error', 
-            text: 'Admin account not found. Please create the admin account first.' 
+        setMessage({ type: 'error', text: error.message });
+      } else if (data.user) {
+        // Check if user is admin
+        const { data: adminData, error: adminError } = await supabase
+          .from('admin_users')
+          .select('is_active, role')
+          .eq('user_id', data.user.id)
+          .single();
+        console.log('Admin Data:', adminData);
+        console.log('Admin Error:', adminError);
+        console.log('adminData.is_active', adminData?.is_active)
+
+        if (adminError || !adminData || !adminData.is_active) {
+          console.log('Admin access denied:', { adminError, adminData });
+          setMessage({
+            type: 'error',
+            text: 'Access denied. This account does not have admin privileges.'
           });
+          // Sign out the user since they don't have admin access
+          await supabase.auth.signOut();
         } else {
-          setMessage({ type: 'error', text: error.message });
+          console.log('Admin login successful, redirecting...');
+          setMessage({ type: 'success', text: 'Admin login successful! Redirecting...' });
+          // Navigate immediately; auth state listener will propagate
+          navigate('/admin/dashboard', { replace: true });
         }
-      } else {
-        setMessage({ type: 'success', text: 'Admin login successful! Redirecting...' });
-        setTimeout(() => navigate('/admin/dashboard'), 1000);
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'An unexpected error occurred' });
@@ -91,25 +114,24 @@ const AdminLogin = () => {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
           <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
           <div className="text-sm text-blue-800">
-            <p className="font-medium mb-1">Test Credentials:</p>
-            <p>Email: admin@wingmovers.com</p>
-            <p>Password: Faheem*61</p>
+            <p className="font-medium mb-1">Admin Setup:</p>
+            <p>Enter an email address and click the button below to create an admin account.</p>
+            <p className="text-xs text-gray-600 mt-1">Default password: Faheem*61</p>
             <button
               onClick={createAdminAccount}
-              disabled={creatingAdmin}
-              className="mt-2 text-blue-600 hover:text-blue-800 underline text-xs"
+              disabled={creatingAdmin || !email}
+              className="mt-2 text-blue-600 hover:text-blue-800 underline text-xs disabled:opacity-50"
             >
-              {creatingAdmin ? 'Creating admin account...' : 'Create admin account if not exists'}
+              {creatingAdmin ? 'Creating admin account...' : 'Create admin account'}
             </button>
           </div>
         </div>
 
         {message && (
-          <div className={`p-4 rounded-lg ${
-            message.type === 'success' 
-              ? 'bg-green-50 border border-green-200 text-green-800' 
-              : 'bg-red-50 border border-red-200 text-red-800'
-          }`}>
+          <div className={`p-4 rounded-lg ${message.type === 'success'
+            ? 'bg-green-50 border border-green-200 text-green-800'
+            : 'bg-red-50 border border-red-200 text-red-800'
+            }`}>
             {message.text}
           </div>
         )}
